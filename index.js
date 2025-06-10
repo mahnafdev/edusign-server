@@ -31,6 +31,11 @@ async function run_db() {
 		const database = db_client.db("edusign");
 		// Define Collections
 		const assignmentsCollection = database.collection("assignments");
+		// GET: All Assignments
+		app.get("/assignments", async (req, res) => {
+			const result = await assignmentsCollection.find().toArray();
+			res.send(result);
+		});
 		// Ping for successful connection confirmation
 		await db_client.db("admin").command({ ping: 1 });
 		console.log("Pinged. Successfully connected to MongoDB!");
