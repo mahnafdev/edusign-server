@@ -31,9 +31,22 @@ async function run_db() {
 		const database = db_client.db("edusign");
 		// Define Collections
 		const assignmentsCollection = database.collection("assignments");
-		// GET: All Assignments
+		// GET: All Assignments or Filtered Assignments or Searched Assignments
 		app.get("/assignments", async (req, res) => {
-			const result = await assignmentsCollection.find().toArray();
+			const { difficulty, subject, search } = req.query;
+			// Get All
+			const query = {};
+			// Filter
+			difficulty ? (query.difficulty = difficulty) : query;
+			subject ? (query.subject = subject) : query;
+			// Search
+			if (search) {
+				query.$or = [
+					{ title: { $regex: search, $options: "i" } },
+					{ description: { $regex: search, $options: "i" } },
+				];
+			}
+			const result = await assignmentsCollection.find(query).toArray();
 			res.send(result);
 		});
 		// POST: Create A New Assignment
