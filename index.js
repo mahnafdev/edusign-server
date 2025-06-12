@@ -1,5 +1,5 @@
 const express = require("express");
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const dotenv = require("dotenv").config;
 const cors = require("cors");
 const app = express();
@@ -36,10 +36,17 @@ async function run_db() {
 			const result = await assignmentsCollection.find().toArray();
 			res.send(result);
 		});
-		// POST: Create An New Assignment
+		// POST: Create A New Assignment
 		app.post("/assignments", async (req, res) => {
 			const newAssignment = req.body;
 			const result = await assignmentsCollection.insertOne(newAssignment);
+			res.send(result);
+		});
+		// GET: A Single Assignment
+		app.get("/assignments/:id", async (req, res) => {
+			const id = req.params.id;
+			const query = { _id: new ObjectId(id) };
+			const result = await assignmentsCollection.findOne(query);
 			res.send(result);
 		});
 		// Ping for successful connection confirmation
