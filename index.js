@@ -30,7 +30,13 @@ async function run_db() {
 		// Define Database
 		const database = db_client.db("edusign");
 		// Define Collections
+		const usersCollection = database.collection("users");
 		const assignmentsCollection = database.collection("assignments");
+		// GET: All Users
+		app.get("/users", async (req, res) => {
+			const result = await usersCollection.find().toArray();
+			res.send(result);
+		});
 		// GET: All Assignments or Filtered Assignments or Searched Assignments
 		app.get("/assignments", async (req, res) => {
 			const { difficulty, subject, search } = req.query;
