@@ -62,6 +62,18 @@ async function run_db() {
 			const result = await assignmentsCollection.findOne(query);
 			res.send(result);
 		});
+		// PUT: An Assignment
+		app.put("/assignments/:id", async (req, res) => {
+			const id = req.params.id;
+			const query = { _id: new ObjectId(id) };
+			const options = { upsert: true };
+			const updatedAssignment = req.body;
+			const updatedDoc = {
+				$set: updatedAssignment,
+			};
+			const result = await assignmentsCollection.updateOne(query, updatedDoc, options);
+			res.send(result);
+		});
 		// DELETE: An Assignment
 		app.delete("/assignments/:id", async (req, res) => {
 			const id = req.params.id;
