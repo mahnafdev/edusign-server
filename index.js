@@ -37,6 +37,12 @@ async function run_db() {
 			const result = await usersCollection.find().toArray();
 			res.send(result);
 		});
+		// POST: An User
+		app.post("/users", async (req, res) => {
+			const newUser = req.body;
+			const result = await usersCollection.insertOne(newUser);
+			res.send(result);
+		});
 		// GET: All Assignments or Filtered Assignments or Searched Assignments
 		app.get("/assignments", async (req, res) => {
 			const { difficulty, subject, search } = req.query;
@@ -55,7 +61,7 @@ async function run_db() {
 			const result = await assignmentsCollection.find(query).toArray();
 			res.send(result);
 		});
-		// POST: Create A New Assignment
+		// POST: An Assignment
 		app.post("/assignments", async (req, res) => {
 			const newAssignment = req.body;
 			const result = await assignmentsCollection.insertOne(newAssignment);
