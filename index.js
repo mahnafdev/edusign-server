@@ -33,6 +33,17 @@ async function run_db() {
 		const usersCollection = database.collection("users");
 		const assignmentsCollection = database.collection("assignments");
 		const submissionsCollection = database.collection("submissions");
+		// GET: All Submissions or Filtered Submissions
+		app.get("/submissions", async (req, res) => {
+			const { user_email, status } = req.query;
+			// Get All
+			const query = {};
+			// Filter
+			user_email ? (query.user_email = user_email) : query;
+			status ? (query.status = status) : query;
+			const result = await submissionsCollection.find(query).toArray();
+			res.send(result);
+		});
 		// POST: A Submission
 		app.post("/submissions", async (req, res) => {
 			const newSubmission = req.body;
