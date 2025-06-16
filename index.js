@@ -32,6 +32,13 @@ async function run_db() {
 		// Define Collections
 		const usersCollection = database.collection("users");
 		const assignmentsCollection = database.collection("assignments");
+		const submissionsCollection = database.collection("submissions");
+		// POST: A Submission
+		app.post("/submissions", async (req, res) => {
+			const newSubmission = req.body;
+			const result = await submissionsCollection.insertOne(newSubmission);
+			res.send(result);
+		});
 		// GET: All Users
 		app.get("/users", async (req, res) => {
 			const result = await usersCollection.find().toArray();
