@@ -1,5 +1,8 @@
 const express = require("express");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
+const firebaseAdmin = require("firebase-admin");
 const dotenv = require("dotenv").config;
 const cors = require("cors");
 const app = express();
@@ -8,7 +11,12 @@ dotenv();
 
 // Middlewares
 app.use(express.json());
-app.use(cors());
+app.use(
+	cors({
+		origin: ["http://localhost:5173"],
+		credentials: true,
+	}),
+);
 
 // MongoDB URI
 const db_uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@professorcluster.rlegbqz.mongodb.net/?retryWrites=true&w=majority&appName=ProfessorCluster`;
@@ -33,6 +41,18 @@ async function run_db() {
 		const usersCollection = database.collection("users");
 		const assignmentsCollection = database.collection("assignments");
 		const submissionsCollection = database.collection("submissions");
+		// JWT: POST: Create & Sets Token
+		app.post("/jwt", async (req, res) => {
+			// Create Token
+			const userData = req.body;
+			const token = jwt.sign(userData, process.env.JWT_SECRET, { expiresIn: "1h" });
+			// Set Token
+			res.cookie("token", token, {
+				httpOnly: true,
+				secure: false,
+			});
+			res.send({ success: true });
+		});
 		// GET: All Submissions or Filtered Submissions
 		app.get("/submissions", async (req, res) => {
 			const { user_email, status } = req.query;
