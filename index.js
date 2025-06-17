@@ -1,3 +1,4 @@
+// Import SDKs
 const express = require("express");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
@@ -17,6 +18,23 @@ app.use(
 		credentials: true,
 	}),
 );
+app.use(cookieParser());
+
+// Verify JWT Token
+const verifyToken = (req, res, next) => {
+	// console.log("Cookie from the Verify-Token Middleware:", token);
+	const token = req?.cookies?.token;
+	// Unauthorized
+	if (!token)
+		return res.status(401).send({ message: "No Access because User is Unauthorized." });
+	// Verify or Forbidden
+	jwt.verify(token, process.env.JWT_SECRET, (error, decoded) => {
+		if (error)
+			return res.status(401).send({ message: "No Access because User is Unauthorized." });
+		req.decoded = decoded;
+		next();
+	});
+};
 
 // MongoDB URI
 const db_uri = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@professorcluster.rlegbqz.mongodb.net/?retryWrites=true&w=majority&appName=ProfessorCluster`;
@@ -54,8 +72,10 @@ async function run_db() {
 			res.send({ success: true });
 		});
 		// GET: All Submissions or Filtered Submissions
-		app.get("/submissions", async (req, res) => {
+		app.get("/submissions", verifyToken, async (req, res) => {
 			const { user_email, status } = req.query;
+			if (user_email !== req?.decoded?.email)
+				return res.status(403).send({ message: "User Access is Forbidden." });
 			// Get All
 			const query = {};
 			// Filter
@@ -68,7 +88,7 @@ async function run_db() {
 		app.post("/submissions", async (req, res) => {
 			const newSubmission = req.body;
 			const result = await submissionsCollection.insertOne(newSubmission);
-			res.send(result);
+			res.status(201).send(result);
 		});
 		// GET: All Users or Filtered Users
 		app.get("/users", async (req, res) => {
@@ -84,7 +104,7 @@ async function run_db() {
 		app.post("/users", async (req, res) => {
 			const newUser = req.body;
 			const result = await usersCollection.insertOne(newUser);
-			res.send(result);
+			res.status(201).send(result);
 		});
 		// GET: All Assignments or Filtered Assignments or Searched Assignments
 		app.get("/assignments", async (req, res) => {
@@ -108,7 +128,7 @@ async function run_db() {
 		app.post("/assignments", async (req, res) => {
 			const newAssignment = req.body;
 			const result = await assignmentsCollection.insertOne(newAssignment);
-			res.send(result);
+			res.status(201).send(result);
 		});
 		// GET: A Single Assignment
 		app.get("/assignments/:id", async (req, res) => {
@@ -127,14 +147,14 @@ async function run_db() {
 				$set: updatedAssignment,
 			};
 			const result = await assignmentsCollection.updateOne(query, updatedDoc, options);
-			res.send(result);
+			res.status(200).send(result);
 		});
 		// DELETE: An Assignment
 		app.delete("/assignments/:id", async (req, res) => {
 			const id = req.params.id;
 			const query = { _id: new ObjectId(id) };
 			const result = await assignmentsCollection.deleteOne(query);
-			res.send(result);
+			res.status(204).send(result);
 		});
 		// Ping for successful connection confirmation
 		await db_client.db("admin").command({ ping: 1 });
