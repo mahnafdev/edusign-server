@@ -72,7 +72,7 @@ async function run_db() {
 			res.send({ success: true });
 		});
 		// GET: All Submissions or Filtered Submissions
-		app.get("/submissions", verifyToken, async (req, res) => {
+		app.get("/submissions", async (req, res) => {
 			const { user_email, status } = req.query;
 			if (user_email !== req?.decoded?.email)
 				return res.status(403).send({ message: "User Access is Forbidden." });
@@ -89,6 +89,18 @@ async function run_db() {
 			const newSubmission = req.body;
 			const result = await submissionsCollection.insertOne(newSubmission);
 			res.status(201).send(result);
+		});
+		// PUT: A Submission
+		app.put("/submissions/:id", async (req, res) => {
+			const id = req.params.id;
+			const query = { _id: new ObjectId(id) };
+			const options = { upsert: true };
+			const updatedSubmission = req.body;
+			const updatedDoc = {
+				$set: updatedSubmission,
+			};
+			const result = await submissionsCollection.updateOne(query, updatedDoc, options);
+			res.status(200).send(result);
 		});
 		// GET: All Users or Filtered Users
 		app.get("/users", async (req, res) => {
