@@ -50,9 +50,14 @@ async function run_db() {
 			const result = await submissionsCollection.insertOne(newSubmission);
 			res.send(result);
 		});
-		// GET: All Users
+		// GET: All Users or Filtered Users
 		app.get("/users", async (req, res) => {
-			const result = await usersCollection.find().toArray();
+			const { email } = req.query;
+			// Get All
+			const query = {};
+			// Filter
+			email ? (query.email = email) : query;
+			const result = await usersCollection.find(query).toArray();
 			res.send(result);
 		});
 		// POST: An User
