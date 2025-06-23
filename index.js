@@ -15,10 +15,10 @@ app.use(express.json());
 app.use(
 	cors({
 		origin: ["http://localhost:5173", "https://edusign-e1494.web.app"],
-		credentials: true,
+		// credentials: true,
 	}),
 );
-app.use(cookieParser());
+// app.use(cookieParser());
 
 // Verify JWT Token
 const verifyToken = (req, res, next) => {
@@ -74,8 +74,8 @@ async function run_db() {
 		// GET: All Submissions or Filtered Submissions
 		app.get("/submissions", async (req, res) => {
 			const { user_email, status } = req.query;
-			if (user_email !== req?.decoded?.email)
-				return res.status(403).send({ message: "User Access is Forbidden." });
+			// if (user_email !== req?.decoded?.email)
+			// 	return res.status(403).send({ message: "User Access is Forbidden." });
 			// Get All
 			const query = {};
 			// Filter
