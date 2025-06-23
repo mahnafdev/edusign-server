@@ -15,7 +15,6 @@ app.use(express.json());
 app.use(
 	cors({
 		origin: ["http://localhost:5173", "https://edusign-e1494.web.app"],
-		// credentials: true,
 	}),
 );
 // app.use(cookieParser());
@@ -177,6 +176,7 @@ async function run_db() {
 			const id = req.params.id;
 			const query = { _id: new ObjectId(id) };
 			const result = await assignmentsCollection.deleteOne(query);
+			await submissionsCollection.deleteMany({ assignment_id: id });
 			res.status(204).send(result);
 		});
 		// Ping for successful connection confirmation
