@@ -14,7 +14,7 @@ dotenv();
 app.use(express.json());
 app.use(
 	cors({
-		origin: ["http://localhost:5173"],
+		origin: ["http://localhost:5173", "https://edusign-e1494.web.app"],
 		credentials: true,
 	}),
 );
@@ -52,7 +52,7 @@ const db_client = new MongoClient(db_uri, {
 async function run_db() {
 	try {
 		// Client connection with server (turn off in deployment)
-		await db_client.connect();
+		// await db_client.connect();
 		// Define Database
 		const database = db_client.db("edusign");
 		// Define Collections
@@ -90,6 +90,13 @@ async function run_db() {
 			const result = await submissionsCollection.insertOne(newSubmission);
 			res.status(201).send(result);
 		});
+		// GET: A Submission
+		app.get("/submissions/:id", async (req, res) => {
+			const id = req.params.id;
+			const query = { _id: new ObjectId(id) };
+			const result = await submissionsCollection.findOne(query);
+			res.send(result);
+		});
 		// PUT: A Submission
 		app.put("/submissions/:id", async (req, res) => {
 			const id = req.params.id;
@@ -97,7 +104,11 @@ async function run_db() {
 			const options = { upsert: true };
 			const updatedSubmission = req.body;
 			const updatedDoc = {
-				$set: updatedSubmission,
+				$set: {
+					obtained_marks: updatedSubmission.obtained_marks,
+					examiner_feedback: updatedSubmission.feedback,
+					status: "Completed",
+				},
 			};
 			const result = await submissionsCollection.updateOne(query, updatedDoc, options);
 			res.status(200).send(result);
