@@ -3,7 +3,7 @@ const express = require("express");
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
-const firebaseAdmin = require("firebase-admin");
+// const firebaseAdmin = require("firebase-admin");
 const dotenv = require("dotenv").config;
 const cors = require("cors");
 const app = express();
@@ -15,17 +15,18 @@ app.use(express.json());
 app.use(
 	cors({
 		origin: ["http://localhost:5173", "https://edusign-e1494.web.app"],
+		credentials: true,
 	}),
 );
-// app.use(cookieParser());
+app.use(cookieParser());
 
 // Verify JWT Token
 const verifyToken = (req, res, next) => {
-	// console.log("Cookie from the Verify-Token Middleware:", token);
 	const token = req?.cookies?.token;
 	// Unauthorized
-	if (!token)
+	if (!token) {
 		return res.status(401).send({ message: "No Access because User is Unauthorized." });
+	}
 	// Verify or Forbidden
 	jwt.verify(token, process.env.JWT_SECRET, (error, decoded) => {
 		if (error)
@@ -62,19 +63,22 @@ async function run_db() {
 		app.post("/jwt", async (req, res) => {
 			// Create Token
 			const userData = req.body;
-			const token = jwt.sign(userData, process.env.JWT_SECRET, { expiresIn: "1h" });
+			const token = jwt.sign(userData, process.env.JWT_SECRET, {
+				expiresIn: "1h",
+			});
 			// Set Token
 			res.cookie("token", token, {
 				httpOnly: true,
-				secure: false,
+				secure: process.env.NODE_ENV === "production" ? true : false,
+				sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
 			});
 			res.send({ success: true });
 		});
 		// GET: All Submissions or Filtered Submissions
-		app.get("/submissions", async (req, res) => {
+		app.get("/submissions", verifyToken, async (req, res) => {
 			const { user_email, status } = req.query;
-			// if (user_email !== req?.decoded?.email)
-			// 	return res.status(403).send({ message: "User Access is Forbidden." });
+			if (user_email && user_email !== req?.decoded?.email)
+				return res.status(403).send({ message: "User Access is Forbidden." });
 			// Get All
 			const query = {};
 			// Filter
@@ -84,7 +88,7 @@ async function run_db() {
 			res.send(result);
 		});
 		// POST: A Submission
-		app.post("/submissions", async (req, res) => {
+		app.post("/submissions", verifyToken, async (req, res) => {
 			const newSubmission = req.body;
 			const result = await submissionsCollection.insertOne(newSubmission);
 			res.status(201).send(result);
@@ -97,7 +101,7 @@ async function run_db() {
 			res.send(result);
 		});
 		// PUT: A Submission
-		app.put("/submissions/:id", async (req, res) => {
+		app.put("/submissions/:id", verifyToken, async (req, res) => {
 			const id = req.params.id;
 			const query = { _id: new ObjectId(id) };
 			const options = { upsert: true };
@@ -113,7 +117,7 @@ async function run_db() {
 			res.status(200).send(result);
 		});
 		// GET: All Users or Filtered Users
-		app.get("/users", async (req, res) => {
+		app.get("/users", verifyToken, async (req, res) => {
 			const { email } = req.query;
 			// Get All
 			const query = {};
@@ -122,20 +126,46 @@ async function run_db() {
 			const result = await usersCollection.find(query).toArray();
 			res.send(result);
 		});
+		// Logout User
+		app.post("/users/logout", async (req, res) => {
+			// Clear Token
+			res.clearCookie("token", {
+				httpOnly: true,
+				secure: process.env.NODE_ENV === "production" ? true : false,
+				sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+			});
+			res.send({ message: "Logged out user." });
+		});
 		// POST: An User
 		app.post("/users", async (req, res) => {
 			const newUser = req.body;
 			const result = await usersCollection.insertOne(newUser);
 			res.status(201).send(result);
 		});
+		// POST: An User with Google
+		app.post("/users/google", async (req, res) => {
+			const newUser = req.body;
+			const isUserExists = await usersCollection.findOne({
+				email: newUser.email,
+			});
+			if (isUserExists) {
+				res.status(400).send({ message: "Signed in user" });
+			} else {
+				const result = await usersCollection.insertOne(newUser);
+				res.status(201).send(result);
+			}
+		});
 		// GET: All Assignments or Filtered Assignments or Searched Assignments
 		app.get("/assignments", async (req, res) => {
-			const { difficulty, subject, search } = req.query;
+			const { difficulty, subject, search, sort } = req.query;
 			// Get All
 			const query = {};
 			// Filter
 			difficulty ? (query.difficulty = difficulty) : query;
 			subject ? (query.subject = subject) : query;
+			// Sorting query
+			const sortQuery = {};
+			sort ? (sortQuery.total_marks = sort === "asc" ? 1 : -1) : sortQuery;
 			// Search
 			if (search) {
 				query.$or = [
@@ -143,24 +173,24 @@ async function run_db() {
 					{ description: { $regex: search, $options: "i" } },
 				];
 			}
-			const result = await assignmentsCollection.find(query).toArray();
+			const result = await assignmentsCollection.find(query).sort(sortQuery).toArray();
 			res.send(result);
 		});
 		// POST: An Assignment
-		app.post("/assignments", async (req, res) => {
+		app.post("/assignments", verifyToken, async (req, res) => {
 			const newAssignment = req.body;
 			const result = await assignmentsCollection.insertOne(newAssignment);
 			res.status(201).send(result);
 		});
 		// GET: A Single Assignment
-		app.get("/assignments/:id", async (req, res) => {
+		app.get("/assignments/:id", verifyToken, async (req, res) => {
 			const id = req.params.id;
 			const query = { _id: new ObjectId(id) };
 			const result = await assignmentsCollection.findOne(query);
 			res.send(result);
 		});
 		// PUT: An Assignment
-		app.put("/assignments/:id", async (req, res) => {
+		app.put("/assignments/:id", verifyToken, async (req, res) => {
 			const id = req.params.id;
 			const query = { _id: new ObjectId(id) };
 			const options = { upsert: true };
